@@ -1,0 +1,64 @@
+To design a solution for extracting structured data (tables, charts, text) from PDFs using self-hosted LLMs on AWS, you need an architecture that bypasses managed API services like Textract or Bedrock in favor of your own compute infrastructure.
+
+The most robust approach today is Multimodal Retrieval & Extraction. Instead of relying on traditional OCR (which loses context of charts and complex table layouts), you use Vision-Language Models (VLMs) that can "see" the PDF pages directly to extract data into JSON format.
+
+I. Solution Architecture
+This solution uses Amazon SageMaker to host the LLM (for scalability and management) or Amazon EC2 (for full control/lower cost), orchestrated by AWS Step Functions.
+
+1. The Core "Brain": Model Selection
+For "tables and images," standard text LLMs (like Llama 3) are insufficient because they cannot interpret visual charts or complex table spanning. You should host a Vision-Language Model (VLM).
+
+Recommended Model: Qwen2.5-VL (7B or 72B) or Llama 3.2 Vision.
+
+Why: These models achieve state-of-the-art performance on OCR-free document understanding, specifically excelling at converting screenshot-like images of tables into JSON or Markdown.
+
+Serving Engine: vLLM or Hugging Face TGI (Text Generation Inference).
+
+Why: These libraries offer high-throughput inference and support continuous batching, which is critical when processing multipage PDFs.
+
+2. High-Level AWS Architecture
+The Workflow:
+
+Ingestion: User uploads PDF to Amazon S3 (/raw).
+
+Trigger: An S3 Event Notification triggers an AWS Lambda function.
+
+Orchestration (Step Functions): Lambda starts a State Machine execution.
+
+Step A (Preprocessing): A Lambda/Fargate task converts PDF pages into high-res images (JPEG/PNG) using pdf2image.
+
+Step B (Batching): Images are batched (e.g., 5 pages per batch) to optimize GPU usage.
+
+Step C (Inference): The batch is sent to the SageMaker Endpoint hosting the VLM. The prompt asks for JSON extraction of specific fields.
+
+Step D (Aggregation): A final Lambda creates a consolidated JSON document from all pages.
+
+Storage: Structured data is saved to Amazon DynamoDB (for operational access) or S3 (as JSON files).
+
+II. Step-by-Step Implementation Details
+Step 1: Hosting the Model (Compute Layer)
+You have two primary options for self-hosting on AWS.
+
+Option A: Amazon SageMaker Real-time Inference (Recommended)
+
+Infrastructure: managed instances (e.g., ml.g5.2xlarge for 7B models, ml.g5.12xlarge for larger models).
+
+Deployment: Use the Hugging Face Deep Learning Container (DLC).
+
+Pros: Autoscaling, health checks, and managed updates are built-in.
+
+Option B: Amazon EC2 (Cost Optimized)Infrastructure: Launch a g5.2xlarge EC2 instance using the AWS Deep Learning AMI (DLAMI).Setup: Run the model using Docker and vLLM.Pros: cheaper for 24/7 distinct workloads; no "per-inference" overhead.Cons: You must manage auto-scaling and server patching yourself.Step 2: The Extraction Strategy (Prompt Engineering)Since you are self-hosting, you don't pay per token, so you can be verbose with instructions.For Tables:Do not ask the model to "summarize." Ask it to "transcribe."Prompt: "Analyze this image. Detect the table containing financial data. Extract every row and column exactly as shown into a JSON list of objects. Handle merged cells by replicating the header value. Output ONLY valid JSON."For Charts/Images:Prompt: "Analyze the bar chart on this page. Extract the data points for each year and category into a JSON format. Provide a brief textual summary of the trend shown in the chart."Step 3: Handling Large Documents (Pagination)Trying to feed a 100-page PDF into an LLM at once will fail (context limits) or be slow.Split: Convert PDF to 1 image per page.Parallelize: Use Step Functions Map State. This allows you to process 10 pages in parallel by calling the SageMaker endpoint concurrently (SageMaker autoscaling handles the load).Merge: Reduce the results into a single file.III. Comparison of Self-Hosted OptionsFeatureVision-Language Model (e.g., Qwen2-VL)OCR + Text LLM (e.g., Tesseract + Llama 3)Best ForComplex tables, charts, hand-written notes, weird layouts.Simple text documents, contracts with standard paragraphs.ArchitectureOne Step: Image in -> JSON out.Two Steps: PDF -> Text (OCR) -> LLM -> JSON.AccuracyHigh (Visual context is preserved).Medium (OCR often garbles tables into "text soup").CostHigher (Requires GPU instances).Lower (OCR is CPU cheap; LLM needs less powerful GPU).
+
+Summary of AWS Services Used
+
+Compute: Amazon SageMaker (hosting the LLM endpoint).
+
+Orchestration: AWS Step Functions (managing the workflow state).
+
+Compute (Pre-processing): AWS Lambda (Python + pdf2image layer) to convert PDFs to images.
+
+Storage: Amazon S3 (Object storage).
+
+Database: Amazon DynamoDB (Storing the extracted metadata and JSON).
+
+Network: Amazon VPC (Keep your LLM private; no internet access required for inference).
