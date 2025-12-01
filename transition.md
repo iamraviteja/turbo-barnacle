@@ -158,3 +158,8 @@ Action	Description	Key Tools
 2. Full Historical Load	Extract all historical data from the Oracle DWs and your interconnected Oracle databases. Load it into ADLS Gen2 as raw files (e.g., CSV, Parquet, JSON).	ADF Copy Activity, Oracle Export Tools (expdp)
 3. Incremental/CDC Pipelines	Replace the functionality of your Oracle DB Links with modern data pipelines. Implement Change Data Capture (CDC) or simple incremental queries to capture ongoing changes from the source Oracle databases and land them into ADLS Gen2.	ADF, Oracle GoldenGate (or similar CDC solution)
 4. Schema Preservation	Store the data in a format (like Parquet or Delta) that preserves the original Oracle schema and data types. This allows the Oracle DW to be retired without losing the source truth.	ADLS Gen2
+
+Action	Description	Key Databricks Tools
+1. Bronze Layer Ingestion	Use Databricks to read the raw files from ADLS Gen2 and write them back as Delta Lake tables in the Bronze Layer. This adds the ACID properties, schema enforcement, and versioning needed for reliability.	Auto Loader, COPY INTO command
+2. Silver/Gold Layer Transformation	Translate and rewrite your core PL/SQL procedures and ETL logic into PySpark/Spark SQL code within Databricks notebooks or Delta Live Tables (DLT) pipelines. Create Silver (cleansed) and Gold (aggregated/reporting) Delta tables.	PySpark/Scala, DLT
+3. Governance Setup	Implement Unity Catalog to secure the Bronze, Silver, and Gold tables, replicating the user and permission model of your Oracle databases.	Unity Catalog
