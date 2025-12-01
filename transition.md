@@ -151,3 +151,10 @@ The interim step (Phase 1) creates a specialized **Ingestion Architecture** that
     * **Organization:** Files are logically partitioned by **source system**, **schema**, **table name**, and **ingestion date** (e.g., `adls://raw/oracle_dw1/schemaA/tableX/2025/11/01/`).
 
 **Key Outcome:** The raw data is now safely available and continuously updated in ADLS Gen2, establishing a measured latency baseline and making your future Databricks work independent of the Oracle DW's compute resources.
+
+## Notes
+Action	Description	Key Tools
+1. Establish Connectivity	Set up Azure Data Factory (ADF) or Synapse Pipelines with the necessary Self-Hosted Integration Runtime (since your Oracle databases are in Azure VMs but may still need secure, optimized connectivity).	ADF/Synapse, Self-Hosted IR
+2. Full Historical Load	Extract all historical data from the Oracle DWs and your interconnected Oracle databases. Load it into ADLS Gen2 as raw files (e.g., CSV, Parquet, JSON).	ADF Copy Activity, Oracle Export Tools (expdp)
+3. Incremental/CDC Pipelines	Replace the functionality of your Oracle DB Links with modern data pipelines. Implement Change Data Capture (CDC) or simple incremental queries to capture ongoing changes from the source Oracle databases and land them into ADLS Gen2.	ADF, Oracle GoldenGate (or similar CDC solution)
+4. Schema Preservation	Store the data in a format (like Parquet or Delta) that preserves the original Oracle schema and data types. This allows the Oracle DW to be retired without losing the source truth.	ADLS Gen2
