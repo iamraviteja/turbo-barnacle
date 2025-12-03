@@ -1,3 +1,46 @@
+The transition to the **interim step** (data landed in ADLS Gen2) **fundamentally changes** how your MicroStrategy Cloud environment can execute queries.
+
+MicroStrategy **cannot directly connect to Azure Data Lake Storage Gen2 (ADLS Gen2) to run standard SQL queries.**
+
+ADLS Gen2 is **object storage** designed to hold files, not a database that understands and executes SQL. To run analytical SQL queries on the data stored in ADLS Gen2, you must introduce a **compute/query engine layer** that can interpret the SQL and process the files.
+
+## 🌉 Required Query Engine Layer (Interim/Transition Solutions)
+
+You are correct that services like **Azure Synapse** are necessary. The goal is to create a "virtual data warehouse" layer over the files in ADLS Gen2.
+
+| Solution | Query Engine | Best Use Case for Interim Step |
+| :--- | :--- | :--- |
+| **Azure Synapse Analytics** | **Serverless SQL Pool** | Best immediate solution for reporting on data in ADLS Gen2 using familiar T-SQL. Cost-effective for ad-hoc queries. |
+| **Azure Synapse Analytics** | **Dedicated SQL Pool** | High-performance, provisioned compute ideal for very large, complex, and predictable reporting workloads. More expensive than Serverless. |
+| **Azure Databricks** | **Databricks SQL Endpoints** | The **long-term vision** solution. Uses powerful Spark clusters to run highly optimized SQL queries directly against Delta Lake tables in ADLS Gen2. |
+
+### 1. The Azure Synapse Serverless SQL Pool (Quickest SQL Path)
+
+For the shortest path to running SQL against the raw data in ADLS Gen2, **Azure Synapse Serverless SQL Pool** is often the chosen interim step:
+
+* **Connectivity:** MicroStrategy Cloud connects to the Synapse Serverless SQL Pool endpoint using a standard **ODBC/JDBC** connection.
+* **Query Language:** MicroStrategy runs **T-SQL** queries, which the Serverless Pool understands.
+* **Execution:** The Serverless Pool translates the incoming SQL query into commands to read the files (Parquet, CSV, Delta, etc.) in ADLS Gen2. It charges based only on the **data processed** during the query.
+
+### 2. The Databricks SQL Endpoints (Best Long-Term Path)
+
+As your ultimate target is Databricks, using **Databricks SQL Endpoints** for your reporting connections is the most aligned path:
+
+* **Connectivity:** MicroStrategy connects to the Databricks SQL Endpoint via a standard ODBC/JDBC driver.
+* **Execution:** Queries run against highly optimized **Delta Lake tables** stored in ADLS Gen2. The performance is typically superior to Serverless SQL for complex analytic queries because Databricks clusters can scale dynamically and apply advanced Spark optimizations.
+
+## 📝 Required Changes to Queries and Reports
+
+The SQL queries themselves will require modifications:
+
+1.  **Connection Strings:** All connection details in MicroStrategy must be updated to point to the new endpoint (e.g., Synapse Serverless or Databricks SQL), replacing the old Oracle connection.
+2.  **SQL Dialect:** Oracle's **PL/SQL** and Oracle-specific functions (e.g., `NVL`, `DECODE`, specific date functions) must be translated to the new dialect (**T-SQL for Synapse** or **Spark SQL for Databricks**).
+3.  **Schema Access:** Since the data is in files, the Synapse or Databricks environment must be set up with **external tables** or **views** (schemas) that point to the file paths in ADLS Gen2, replicating the table structure MicroStrategy expects.
+    * *Example (Synapse):* You use the `OPENROWSET` function or an external table definition to tell Synapse where the Parquet or Delta files are located.
+
+**In summary, MicroStrategy cannot run queries against ADLS Gen2 directly. You must stand up an intermediate query service (Synapse Serverless SQL Pool or Databricks SQL Endpoint) to bridge the gap and translate standard SQL into file-based data access.**
+
+
 ## 💰 Cost Benefit and MicroStrategy Analysis Summary
 
 This document consolidates the analysis concerning the cost-benefit justification for the interim step (moving data to ADLS Gen2) and the technical requirements for connecting **MicroStrategy Cloud** during the transition.
