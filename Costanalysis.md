@@ -26,7 +26,7 @@ To enable MicroStrategy reporting during the transition, you must introduce a co
 | Azure Synapse Serverless SQL Pool | Uses T-SQL to query files directly in ADLS Gen2. Pay-per-query cost (only for data processed). | Ideal Interim Solution. Quick to set up; allows MSTR reporting to resume with minimal provisioning cost. |
 | Databricks SQL Endpoints | Uses highly optimized Spark SQL to query Delta Lake tables. Pay-for-cluster-runtime cost. | Long-Term Vision. Superior performance for complex analytics; aligns with your final target architecture. |
 Transition Effort to Databricks SQL Endpoints
-The transition effort from the interim Synapse Serverless Pool to Databricks SQL Endpoints is moderate and strategic.
+The effort to transition from the interim Synapse Serverless Pool to Databricks SQL Endpoints is moderate and strategic.
 | Area of Effort | Synapse Serverless to Databricks SQL |
 |---|---|
 | Data Migration | None. Data already resides in ADLS Gen2. |
@@ -36,3 +36,4 @@ The transition effort from the interim Synapse Serverless Pool to Databricks SQL
 Conclusion on Negation of Benefits
 The requirement for a query engine does not negate the benefits of the interim step.
 The effort and cost of deploying Synapse/Databricks is the necessary trade-off for escaping the high, fixed, and inflexible licensing cost of the Oracle DW. The new compute costs are flexible and significantly lower than the costs avoided.
+Would you like me to elaborate on the technical steps for setting up MicroStrategy connectivity to a Synapse Serverless SQL Pool?
