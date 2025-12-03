@@ -154,3 +154,121 @@ To minimize the performance difference in the interim step, you must optimize th
 4.  **Filter Early:** Push filtering logic into the `WHERE` clause as early as possible.
 
 In conclusion, you are trading **top-tier, guaranteed performance** (Oracle) for **maximum cost flexibility and scalability** (Synapse Serverless). For MicroStrategy, this means simpler, aggregated reports may run fine, but highly complex, multi-join reports may require more time than they did on the Oracle DW.
+
+```python?code_reference&code_event_index=2
+import pandas as pd
+
+# Define the row counts and row sizes
+rows_per_year_1 = 2_800_000
+rows_per_year_2 = 10_600_000
+row_sizes_kb = [50, 100, 150, 200, 250, 500]  # Added 250 KB and 500 KB
+
+# Conversion factor: 1 TB = 1024^3 KB
+KB_TO_TB = 1024**3
+
+results = []
+
+for rows in [rows_per_year_1, rows_per_year_2]:
+    for size_kb in row_sizes_kb:
+        total_size_kb = rows * size_kb
+        total_size_tb = total_size_kb / KB_TO_TB
+        
+        # Convert to PB for easier reading if size >= 1000 TB
+        if total_size_tb >= 1000:
+            total_size_pb = total_size_tb / 1024
+            size_unit = f"{total_size_pb:.2f} PB"
+        else:
+            size_unit = f"{total_size_tb:.2f} TB"
+
+        results.append({
+            "Rows per Year": f"{rows / 1_000_000:.1f} Million",
+            "Average Row Size (KB)": size_kb,
+            "Total Data per Year": size_unit
+        })
+
+# Create a DataFrame and format it
+df = pd.DataFrame(results)
+
+# Print the table
+print(df.to_markdown(index=False))
+
+```
+
+```text?code_stdout&code_event_index=2
+| Rows per Year   |   Average Row Size (KB) | Total Data per Year   |
+|:----------------|------------------------:|:----------------------|
+| 2.8 Million     |                      50 | 0.13 TB               |
+| 2.8 Million     |                     100 | 0.26 TB               |
+| 2.8 Million     |                     150 | 0.39 TB               |
+| 2.8 Million     |                     200 | 0.52 TB               |
+| 2.8 Million     |                     250 | 0.65 TB               |
+| 2.8 Million     |                     500 | 1.30 TB               |
+| 10.6 Million    |                      50 | 0.49 TB               |
+| 10.6 Million    |                     100 | 0.99 TB               |
+| 10.6 Million    |                     150 | 1.48 TB               |
+| 10.6 Million    |                     200 | 1.97 TB               |
+| 10.6 Million    |                     250 | 2.47 TB               |
+| 10.6 Million    |                     500 | 4.94 TB               |
+
+```
+
+The table has been updated to include the row sizes of **250 KB** and **500 KB**.
+
+Here is the complete table showing the total annual data volume across all scenarios:
+
+| Rows per Year | Average Row Size (KB) | Total Data per Year |
+| :--- | :--- | :--- |
+| **2.8 Million** | 50 | 0.13 TB |
+| **2.8 Million** | 100 | 0.26 TB |
+| **2.8 Million** | 150 | 0.39 TB |
+| **2.8 Million** | 200 | 0.52 TB |
+| **2.8 Million** | 250 | 0.65 TB |
+| **2.8 Million** | 500 | **1.30 TB** |
+| **10.6 Million** | 50 | 0.49 TB |
+| **10.6 Million** | 100 | 0.99 TB |
+| **10.6 Million** | 150 | 1.48 TB |
+| **10.6 Million** | 200 | 1.97 TB |
+| **10.6 Million** | 250 | **2.47 TB** |
+| **10.6 Million** | 500 | **4.94 TB** |
+
+-----
+
+### Key Impact Point
+
+The largest volume is now nearly **5 Terabytes (4.94 TB)** annually. This scale moves the data strategy from simply justifying the cloud migration to making it an **urgent financial and operational necessity**.
+
+A **5 TB annual data flow** stored within an Oracle Data Warehouse would force massive and continuous scaling of premium hardware and processor licenses, leading to costs in the **multi-millions** over several years. The interim step of moving this flow to ADLS Gen2 is crucial for cost containment.
+
+The formula used for the data size calculation is the standard method for determining total data volume based on row count and average row size.
+
+The calculation performed in the previous steps was:
+
+$$\text{Total Data Volume (TB)} = \frac{\text{Rows per Year} \times \text{Average Row Size (KB)}}{1024^3}$$
+
+***
+
+## 📐 Formula Breakdown
+
+Here is the formula expressed using the base unit of **Bytes** and then broken down into steps:
+
+### 1. General Formula (in Bytes)
+
+$$\text{Total Data Volume (TB)} = \frac{\text{Rows} \times \text{Row Size (Bytes)}}{1024 \times 1024 \times 1024 \times 1024}$$
+
+### 2. Step-by-Step Conversion
+
+Since the row size was provided in **Kilobytes (KB)**, the calculation converts the total volume from KB through MB and GB to reach TB, using the binary conversion factor of $\mathbf{1024}$:
+
+| Step | Calculation | Unit |
+| :--- | :--- | :--- |
+| **A. Total Kilobytes** | $\text{Rows per Year} \times \text{Average Row Size (KB)}$ | KB |
+| **B. Total Megabytes** | $\text{Total KB} / 1024$ | MB |
+| **C. Total Gigabytes** | $\text{Total MB} / 1024$ | GB |
+| **D. Total Terabytes** | $\text{Total GB} / 1024$ | **TB** |
+
+The Python calculation used the denominator $\mathbf{1024^3}$ to perform the conversion directly from KB to TB.
+
+### Example using 2.8 Million Rows @ 500 KB:
+
+1.  **Total KB:** $2,800,000 \times 500 \text{ KB} = 1,400,000,000 \text{ KB}$
+2.  **Total TB:** $1,400,000,000 / 1024 / 1024 / 1024 \approx \mathbf{1.30 \text{ TB}}$
